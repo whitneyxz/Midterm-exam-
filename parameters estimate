@@ -1,0 +1,246 @@
+#######################################################
+#estimate parameters of BS, CHbear,CHbull,CH models#
+#######################################################
+setwd("E:/MFIN课程/7009 financial engineer/paper/DATA")
+library("readxl")
+DBS <- read_excel("mdata.xlsx")
+DBS <- as.data.frame(DBS)
+
+#################BS model#############################
+BS <- function(S, K, T, r, sig, type) {
+    if (T == 0 & type == "C") return(max(0, S - K))
+    if (T == 0 & type == "P") return(max(0, K - S))
+    
+    d1 <- (log(S / K) + (r + sig^2 / 2) * T) / (sig * sqrt(T))
+    d2 <- d1 - sig * sqrt(T)
+    value <- S * pnorm(d1) - exp(-r * T) * K * pnorm(d2)
+    if (type == "P") return(exp(-r * T) * K + value - S)
+    return(value)
+}
+
+
+b=0
+g=function(sig) {
+    a <- matrix(rep(0, 75), ncol = 1)
+    for (j in 1:75){ 
+    S= DBS[j,4]
+    K= DBS[j,2]
+    T= DBS[j,6]
+    r= DBS[j,5]
+    type= DBS[j,7]
+    p= DBS[j,3]
+    a[j,1] = ( (BS(S, K, T, r, sig, type )-p)/p)^2
+    b= a[j,1]+b
+    }
+g = b
+}
+optimize(g, interval=c(0,1.5))
+
+#####results using total data#####
+$minimum
+[1] 0.0149878
+
+$objective
+[1] 0.01123057
+
+#####results using the data from Jan 2018 to Nov 2019#####
+$minimum
+[1] 0.01676655
+
+$objective
+[1] 0.003544683
+
+
+#################CH model############################
+
+CH <- function(S, K, T, r, sig, type, delta, lamb) {
+    if (T == 0 & type == "C") return(max(0, S - K))
+    if (T == 0 & type == "P") return(max(0, K - S))
+    
+    d1 <- (log(S / K) + (r + lamb-delta+sig^2 / 2) * T) / (sig * sqrt(T))
+    d2 <- d1 - sig * sqrt(T)
+    value <- S * pnorm(d1) * exp(-delta * T) - K * pnorm(d2)* exp(-(lamb + r)* T) + S *(1- exp(-delta * T))
+    if (type == "P") return(K * exp(-r * T )* (1- exp(-lamb* T) ) + K* exp(-(lamb + r)* T)* pnorm(-d2) -S* exp(-delta * T)* pnorm(-d1))
+    return(value)
+}
+
+b=0
+g=function(x) {
+    sig <- x[1]
+    delta <- x[2]
+    lamb <- x[3]
+    a <- matrix(rep(0, 75), ncol = 1)
+    for (j in 1:75){ 
+    S= DBS[j,4]
+    K= DBS[j,2]
+    T= DBS[j,6]
+    r= DBS[j,5]
+    type= DBS[j,7]
+    p= DBS[j,3]
+    a[j,1] = ( CH(S, K, T, r, sig, type, delta, lamb )-p)^2
+    b= a[j,1]+b
+    }
+return(b)
+}
+init <- c(sig=0, delta=0, lamb=0)
+optim(par = init, fn = g)
+
+#####results using total data#####
+$par
+      sig           delta         lamb 
+7.676991e-09    1.766112e-03    1.789081e-03 
+$value
+[1] 0.006999992
+$counts
+function gradient 
+     388       NA 
+$convergence
+[1] 0
+$message
+NULL
+#####results using the data from Jan 2018 to Nov 2019#####
+$par
+        sig       delta        lamb 
+0.006011652 0.001609609 0.001474509 
+
+$value
+[1] 0.002673166
+
+$counts
+function gradient 
+     146       NA 
+
+$convergence
+[1] 0
+
+$message
+NULL
+
+
+
+#################CHbear model###################################
+
+CH1<- function(S, K, T, r, sig, type, lamb) {
+    if (T == 0 & type == "C") return(max(0, S - K))
+    if (T == 0 & type == "P") return(max(0, K - S))
+    
+    d1 <- (log(S / K) + (r + lamb +sig^2 / 2) * T) / (sig * sqrt(T))
+    d2 <- d1 - sig * sqrt(T)
+    value <- S * pnorm(d1) - K * pnorm(d2)* exp(-(lamb + r)* T) 
+    if (type == "P") return(K * exp(-r * T )* (1- exp(-lamb* T) ) + K* exp(-(lamb + r)* T)* pnorm(-d2) -S* pnorm(-d1))
+    return(value)
+}
+
+
+b=0
+g=function(y) {
+    sig <- y[1]
+    lamb <- y[2]
+    a <- matrix(rep(0, 75), ncol = 1)
+    for (j in 1:75){ 
+    S= DBS[j,4]
+    K= DBS[j,2]
+    T= DBS[j,6]
+    r= DBS[j,5]
+    type= DBS[j,7]
+    p= DBS[j,3]
+    a[j,1] = ( CH1(S, K, T, r, sig, type, lamb )-p)^2
+    b= a[j,1]+b
+    }
+return(b)
+}
+init1 <- c(sig=0, lamb=0)
+optim(par = init1, fn = g)
+
+#####results using total data#####
+$par
+     sig         lamb 
+0.0115955688 0.0009440651 
+$value
+[1] 0.01046059
+$counts
+function gradient 
+     109       NA 
+$convergence
+[1] 0
+$message
+NULL
+
+###results using the data from Jan 2018 to Nov 2019#####
+$par
+     sig         lamb 
+0.0154735851 0.0003912434 
+$value
+[1] 0.003496082
+$counts
+function gradient 
+      73       NA 
+$convergence
+[1] 0
+
+
+
+
+#################CHbull model###################################
+
+CHbull
+
+CH2 <- function(S, K, T, r, sig, type, delta) {
+    if (T == 0 & type == "C") return(max(0, S - K))
+    if (T == 0 & type == "P") return(max(0, K - S))
+    
+    d1 <- (log(S / K) + (r -delta+sig^2 / 2) * T) / (sig * sqrt(T))
+    d2 <- d1 - sig * sqrt(T)
+    value <- S * pnorm(d1) * exp(-delta * T) - K * pnorm(d2)* exp(- r* T) + S *(1- exp(-delta * T))
+    if (type == "P") return(K* exp(-r* T)* pnorm(-d2) -S* exp(-delta * T)* pnorm(-d1))
+    return(value)
+}
+
+b=0
+g=function(z) {
+    sig <- z[1]
+    delta <- z[2]
+    a <- matrix(rep(0, 75), ncol = 1)
+    for (j in 1:75){ 
+    S= DBS[j,4]
+    K= DBS[j,2]
+    T= DBS[j,6]
+    r= DBS[j,5]
+    type= DBS[j,7]
+    p= DBS[j,3]
+    a[j,1] = ( CH2(S, K, T, r, sig, type, delta )-p)^2
+    b= a[j,1]+b
+}
+return(b)
+}
+init2 <- c(sig=0, delta =0)
+optim(par = init2, fn = g)
+
+#####results using total data#####
+$par
+      sig        delta 
+0.0135400297 0.0004393043 
+$value
+[1] 0.0111438
+$counts
+function gradient 
+     111       NA 
+$convergence
+[1] 0
+$message
+NULL
+
+#####results using the data from Jan 2018 to Nov 2019#####
+$par
+      sig        delta 
+0.0148109256 0.0005845522 
+$value
+[1] 0.003442851
+$counts
+function gradient 
+      75       NA 
+$convergence
+[1] 0
+$message
+NULL
+
